@@ -28,6 +28,18 @@ struct TronManagerStateTests {
         restored.kind = .lap
         try expect(restored.resultText.isEmpty, "切换币种后没有清空结果文本")
 
+        state.apiKey = "  test-key  "
+        try expect(state.apiKey == "test-key", "API Key 未去掉首尾空白")
+        let keyRestored = StopwatchState(defaults: defaults)
+        try expect(keyRestored.apiKey == "test-key", "API Key 未从临时 suite 恢复")
+        keyRestored.apiKey = "   "
+        try expect(keyRestored.apiKey.isEmpty, "空白 API Key 未视为清除")
+        try expect(defaults.string(forKey: TronAPIKey.storageKey) == nil, "已清除的 API Key 仍被保存")
+
+        restored.resultText = "待清除的查询结果"
+        restored.clearResults()
+        try expect(restored.resultText.isEmpty, "清除后查询结果文本仍在")
+
         defaults.set("5201314", forKey: "stopwatch.lastLapTag")
         let unlockCodeState = StopwatchState(defaults: defaults)
         try expect(unlockCodeState.lapTag.isEmpty, "5201314 不应恢复到地址输入框")

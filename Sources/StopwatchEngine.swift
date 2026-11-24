@@ -190,6 +190,7 @@ final class StopwatchEngine {
         var request = URLRequest(url: url)
         request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        applyAPIKey(&request)
         let (data, response) = try await session.data(for: request)
         try check(response)
         return try decodedResponse(data)
@@ -200,6 +201,7 @@ final class StopwatchEngine {
         request.httpMethod = "POST"
         request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyAPIKey(&request)
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
         try check(response)
@@ -219,6 +221,12 @@ final class StopwatchEngine {
             throw StopwatchEngineError.nodeRejected((root["message"] as? String) ?? "请求未成功。")
         }
         return root
+    }
+
+    private func applyAPIKey(_ request: inout URLRequest) {
+        let key = TronAPIKey.load()
+        guard !key.isEmpty else { return }
+        request.setValue(key, forHTTPHeaderField: "TRON-PRO-API-KEY")
     }
 
     private func check(_ response: URLResponse) throws {

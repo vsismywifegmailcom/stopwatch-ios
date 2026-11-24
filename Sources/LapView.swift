@@ -11,6 +11,8 @@ struct TronManagerView: View {
     @State private var exportText = ""
     @State private var actionMessage: String?
     @State private var showingRestoreConfirmation = false
+    @State private var showingAPIKey = false
+    @State private var apiKeyDraft = ""
 
     var body: some View {
         NavigationStack {
@@ -20,6 +22,9 @@ struct TronManagerView: View {
         }
         .sheet(item: $activeSheet) { sheet in
             sheetContent(sheet)
+        }
+        .sheet(isPresented: $showingAPIKey) {
+            apiKeySheet
         }
     }
 
@@ -85,16 +90,56 @@ struct TronManagerView: View {
     private var addressSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("查询地址").font(.headline)
-            TextField("输入 T 开头的 TRON 地址", text: $state.lapTag)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.search)
-                .onSubmit { state.start() }
+            HStack(spacing: 8) {
+                TextField("输入 T 开头的 TRON 地址", text: $state.lapTag)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.search)
+                    .onSubmit { state.start() }
+                Button("API Key") {
+                    apiKeyDraft = state.apiKey
+                    showingAPIKey = true
+                }
+                .buttonStyle(.bordered)
+            }
             Text("地址和查询结果自动保存，下次打开可继续编辑。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var apiKeySheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("TronGrid API Key")
+                    .font(.headline)
+                TextField("粘贴 API Key", text: $apiKeyDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+                Text("保存在本机。之后的查询、余额和转账请求会带上 TRON-PRO-API-KEY。留空保存即清除。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("API Key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { showingAPIKey = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        state.apiKey = apiKeyDraft
+                        showingAPIKey = false
+                        actionMessage = state.apiKey.isEmpty ? "已清除 API Key。" : "API Key 已保存。"
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     private var balanceSection: some View {
@@ -182,6 +227,12 @@ struct TronManagerView: View {
             HStack {
                 Text("查询结果（可编辑）").font(.headline)
                 Spacer()
+                Button("清除", role: .destructive) {
+                    state.clearResults()
+                    actionMessage = "已清除查询结果。"
+                }
+                .font(.caption)
+                .disabled(state.resultText.isEmpty && state.records.isEmpty)
                 Button("恢复查询结果") { showingRestoreConfirmation = true }
                     .font(.caption)
                     .disabled(state.records.isEmpty)

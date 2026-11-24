@@ -35,6 +35,17 @@ final class StopwatchState: ObservableObject {
     @Published private(set) var message: String?
     @Published private(set) var monitorMessage: String?
     @Published private(set) var cursor: String?
+    /// 保存在本机，后续 TronGrid 请求会带上 TRON-PRO-API-KEY。
+    @Published var apiKey: String {
+        didSet {
+            let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed == apiKey else {
+                apiKey = trimmed
+                return
+            }
+            TronAPIKey.save(trimmed, to: defaults)
+        }
+    }
     @Published var autoLap = false {
         didSet {
             guard oldValue != autoLap else { return }
@@ -74,6 +85,7 @@ final class StopwatchState: ObservableObject {
         self.kind = LapKind(rawValue: defaults.string(forKey: Self.savedKindKey) ?? "") ?? .lap
         self.resultText = defaults.string(forKey: Self.savedResultTextKey) ?? ""
         self.generatedResultText = defaults.string(forKey: Self.savedGeneratedTextKey) ?? ""
+        self.apiKey = TronAPIKey.load(from: defaults)
         if isUnlockCode { defaults.removeObject(forKey: Self.savedAddressKey) }
     }
 
@@ -87,6 +99,24 @@ final class StopwatchState: ObservableObject {
     func query(_ requestedKind: LapKind) {
         kind = requestedKind
         start(reset: true)
+    }
+
+    /// 清掉编辑框、已加载交易和分页游标。余额与地址保留。
+    func clearResults() {
+        recordsTask?.cancel()
+        recordsTask = nil
+        recordsGeneration &+= 1
+        recordsLoading = false
+        cursor = nil
+        records = []
+        hasLoadedRecords = false
+        monitorKnownIDs = nil
+        if autoLap && isSceneActive {
+            monitorMessage = "监控等待当前地址的首次查询。"
+        }
+        clearQueryOutput()
+        message = nil
+        updateLoading()
     }
 
     /// 用户明确选择恢复时，用当前已加载记录替换编辑内容，并更新自动生成基线。

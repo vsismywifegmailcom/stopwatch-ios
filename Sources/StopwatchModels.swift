@@ -1,5 +1,24 @@
 ﻿import Foundation
 
+/// TronGrid API Key 存在调用方传入的 UserDefaults 中，请求时作为 TRON-PRO-API-KEY。
+enum TronAPIKey {
+    static let storageKey = "stopwatch.tronApiKey"
+
+    static func load(from defaults: UserDefaults = .standard) -> String {
+        (defaults.string(forKey: storageKey) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func save(_ value: String, to defaults: UserDefaults = .standard) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            defaults.removeObject(forKey: storageKey)
+        } else {
+            defaults.set(trimmed, forKey: storageKey)
+        }
+    }
+}
+
 enum LapKind: String, CaseIterable, Identifiable {
     case lap = "TRX"
     case split = "TRC20"
